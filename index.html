@@ -27,30 +27,47 @@ button:focus-visible{outline:3px solid #ffb703}body{touch-action:manipulation;ov
 #fin h2{color:#d6336c;font-size:1.5em;margin:0}#fin p{margin:0;opacity:0;animation:up 1.6s forwards}
 #fin button{align-self:center;text-align:center;margin-bottom:10px}
 @keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* Estilo para el reproductor de YouTube de la boda en móviles y PC */
+#yt-wedding-container {
+ position: absolute;
+ bottom: 10px;
+ left: 50%;
+ transform: translateX(-50%);
+ z-index: 10;
+ display: none;
+ background: rgba(255, 240, 245, 0.9);
+ border: 2px solid #e0678a;
+ border-radius: 8px;
+ padding: 4px;
+ box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
 </style></head><body>
 <div id="wrap">
-<div id="cvw"><canvas id="c" width="320" height="180"></canvas><div id="fx"></div><div id="fin"></div></div>
+<div id="cvw">
+ <canvas id="c" width="320" height="180"></canvas>
+ <div id="fx"></div>
+ <!-- Reproductor visible en la escena de la boda para garantizar audio en celulares -->
+ <div id="yt-wedding-container">
+  <div id="yt-player"></div>
+ </div>
+ <div id="fin"></div>
+</div>
 <div id="ctr"><button id="bl" class="pb">◀</button><button id="br" class="pb">▶</button><button id="ok" class="pb">▼ ENTER / TOCAR</button></div>
 <div id="dlg"><div id="who"></div><div id="txt"></div><div id="ctl"></div></div>
 </div>
 
-<!-- Contenedores multimedia adaptados para móviles -->
-<div id="ytp" style="position:fixed;right:0;bottom:0;width:2px;height:2px;opacity:.01;pointer-events:none"></div>
-<video id="bgMusic" src="cancion.mp4" loop playsinline preload="auto" style="display:none;"></video>
-
 <script>
 const $=i=>document.getElementById(i),sleep=ms=>new Promise(r=>setTimeout(r,ms)),dlg=$('dlg'),g=$('c').getContext('2d');
-let sc='title',T=0,wx=0,kw=0,goal=null,res=null,ax=60,pxx=380,fin=0,flw=0,ex='n',spk='',face=1,kl=0,frm=0,pep=0,clerk=0,stamp=0,jx=0,jy=0,jv=0,cnt=0,zm=1,wa=132,wp=188,BQ=null,yt=null,ytOK=0,SP=[],FW=[];
-const YT_FIXED='CwGbMYLjIpQ';
-let YT_ID=YT_FIXED?(YT_FIXED.match(/([\w-]{11})$/)||[])[1]:(()=>{try{return localStorage.getItem('yt')||''}catch(e){return ''}})();
+let sc='title',T=0,wx=0,kw=0,goal=null,res=null,ax=60,pxx=380,fin=0,flw=0,ex='n',spk='',face=1,kl=0,frm=0,pep=0,clerk=0,stamp=0,jx=0,jy=0,jv=0,cnt=0,zm=1,wa=132,wp=188,BQ=null,ytPlayer=null,ytReady=false,SP=[],FW=[];
+const YT_ID='CwGbMYLjIpQ'; // ID oficial de la canción de Mitski
 const FD={n:'',e:'',a:'',t:''};
 const HRT=Array.from({length:22},(_,i)=>({x:Math.random()*320,y:Math.random()*180,v:.15+Math.random()*.3,p:i}));
 const PETALS=Array.from({length:90},(_,i)=>({x:Math.random()*320,y:Math.random()*180,v:.25+Math.random()*.5,p:i}));
 const CL=Array.from({length:9},(_,i)=>({x:i*45,y:10+(i*23)%65,s:1+i%3*.35,v:.08+(i%3)*.05}));
 
-/* ---------- EFECTOS DE SONIDO (Celulares y PC) ---------- */
+/* ---------- EFECTOS DE SONIDO (Chiptune limpio) ---------- */
 let A,mg;
-const bgMusic=$('bgMusic');
 function au(){if(!A){A=new(window.AudioContext||window.webkitAudioContext)();mg=A.createGain();mg.gain.value=.4;mg.connect(A.destination)}if(A.state==='suspended')A.resume()}
 function tn(type,f,f2,d,v=.15,t=0){if(!A)return;const o=A.createOscillator(),gn=A.createGain(),s=A.currentTime+t;o.type=type;o.frequency.setValueAtTime(f,s);if(f2)o.frequency.exponentialRampToValueAtTime(f2,s+d);gn.gain.setValueAtTime(v,s);gn.gain.exponentialRampToValueAtTime(.001,s+d);o.connect(gn);gn.connect(mg);o.start(s);o.stop(s+d+.02)}
 const coin=()=>{tn('square',988,0,.08,.12);tn('square',1319,0,.42,.12,.08)};
@@ -59,23 +76,45 @@ const bad=()=>{tn('square',220,110,.4,.12);tn('sawtooth',160,70,.4,.08)};
 const chime=()=>[1047,1319,1568,2093].forEach((f,i)=>tn('triangle',f,0,.45,.1,i*.12));
 const stampSnd=()=>{tn('square',120,50,.2,.25);tn('sawtooth',70,40,.25,.15)};
 
-/* ---------- MÚSICA ADAPTADA PARA MÓVILES (YouTube / MP4) ---------- */
-function ytId(t){const m=t.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([\w-]{11})/)||t.match(/^([\w-]{11})$/);return m?m[1]:''}
-function loadYT(){if(!YT_ID||yt||window.YT)return;window.onYouTubeIframeAPIReady=()=>{yt=new YT.Player('ytp',{width:'2',height:'2',videoId:YT_ID,playerVars:{playsinline:1,controls:0,loop:1,playlist:YT_ID,rel:0},events:{onReady:()=>{ytOK=1}}})};const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';document.head.appendChild(s)}
-
-/* Función clave para desbloquear audio en celulares al primer toque */
-function unlockMobileAudio(){
- au();
- if(ytOK){try{yt.mute();yt.playVideo();setTimeout(()=>{yt.pauseVideo();yt.seekTo(0,true)},200)}catch(e){}}
- bgMusic.play().then(()=>{bgMusic.pause();bgMusic.currentTime=0;}).catch(e=>{});
+/* ---------- API DE YOUTUBE PARA MÓVILES Y LAPTOPS ---------- */
+function initYouTube(){
+ if(ytPlayer || window.YT) return;
+ window.onYouTubeIframeAPIReady = function(){
+  ytPlayer = new YT.Player('yt-player', {
+   height: '36',
+   width: '140',
+   videoId: YT_ID,
+   playerVars: { 'playsinline': 1, 'controls': 1, 'loop': 1, 'playlist': YT_ID },
+   events: {
+    'onReady': (e)=>{ ytReady = true; }
+   }
+  });
+ };
+ const tag = document.createElement('script');
+ tag.src = "https://www.youtube.com/iframe_api";
+ const firstScriptTag = document.getElementsByTagName('script')[0];
+ firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 }
 
-async function music(on){
- if(!on){bgMusic.pause();bgMusic.currentTime=0;if(ytOK)yt.pauseVideo();return}
+function music(on){
+ const container = $('yt-wedding-container');
+ if(!on){
+  container.style.display = 'none';
+  if(ytReady && ytPlayer) { try{ ytPlayer.pauseVideo(); }catch(e){} }
+  return;
+ }
  au();
- if(ytOK){yt.seekTo(0,true);yt.playVideo();yt.unMute();yt.setVolume(100);return}
- bgMusic.play().catch(e=>{console.log("Reproduciendo respaldo local en móvil");});
+ container.style.display = 'block'; // Muestra el reproductor estético en la boda
+ if(ytReady && ytPlayer){
+  try{
+   ytPlayer.seekTo(0, true);
+   ytPlayer.unMute();
+   ytPlayer.setVolume(100);
+   ytPlayer.playVideo();
+  }catch(e){console.log("Error al reproducir YouTube:", e);}
+ }
 }
+
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&A)A.resume()});
 
 /* ---------- UI / DIÁLOGOS ---------- */
@@ -199,14 +238,12 @@ function loop(){T++;let mv=0;if(goal!=null){if(kw){mv=1;face=1;wx+=.9;if(wx>=goa
 async function move(set,a,b,ms){const s=performance.now();while(true){const k=Math.min(1,(performance.now()-s)/ms);set(a+(b-a)*k);if(k>=1)break;await sleep(16)}}
 async function game(){
  sc='title';ex='n';spk='';face=1;wx=0;ax=60;flw=0;frm=0;pep=0;stamp=0;FD.n=FD.e=FD.a=FD.t='';$('fin').style.display='none';music(false);unfade();fin=0;jy=jv=0;cnt=0;CO.forEach(c=>c.t=0);zm=1;wa=132;wp=188;BQ=null;FW.length=0;SP.length=0;
- if(!YT_ID){await say('PEPE','Pega el enlace de YouTube de "My Love Mine All Mine" de Mitski (o toca OMITIR si usarás cancion.mp4).',1);const l=await ask(['OMITIR'],'Enlace de YouTube...');const id=ytId(l);if(id){YT_ID=id;try{localStorage.setItem('yt',id)}catch(e){}}}
- loadYT();
  
- /* Al hacer clic en INICIAR, desbloqueamos audio para móviles y PC simultáneamente */
+ initYouTube(); // Inicializa el reproductor oficial de YouTube
+ 
  await say('NARRADOR','Hoy es un día muy especial, Aurora. Esta historia está hecha solo para ti. Toca el botón para empezar.',1);
  await choose(['▶ INICIAR']);
  good();
- unlockMobileAudio(); 
  
  /* FASE 1: camino al Registro Civil */
  await fade('#fff');sc='out';unfade();await sleep(400);
@@ -235,7 +272,7 @@ async function game(){
  await say('OFICIAL','Pepe, ¿acepta a Aurora como su esposa por más de 10,000 años?',1);await choose(['¡Sí, acepto!','Mil veces sí, y otras 10,000 más']);good();
  await say('OFICIAL','Aurora, ¿acepta a Pepe como su esposo por más de 10,000 años?',1);await choose(['¡Sí, acepto!','Obvio que sí, ni lo dudes']);good();
  
- /* FASE 4: ceremonia (Suena la música principal en cualquier navegador móvil) */
+ /* FASE 4: ceremonia (Aparece y suena YouTube con Mitski original en cualquier celular) */
  await fade('#fff');sc='wed';flw=1;ex='joy';unfade();await sleep(500);chime();
  music(true);
  await say('OFICIAL','Por el poder que me otorga el Registro Civil y el amor que veo aquí, los declaro MARIDO Y MUJER. Pueden darse un beso.');
