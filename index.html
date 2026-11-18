@@ -34,8 +34,9 @@ button:focus-visible{outline:3px solid #ffb703}body{touch-action:manipulation;ov
 <div id="dlg"><div id="who"></div><div id="txt"></div><div id="ctl"></div></div>
 </div>
 
+<!-- Contenedores multimedia adaptados para móviles -->
 <div id="ytp" style="position:fixed;right:0;bottom:0;width:2px;height:2px;opacity:.01;pointer-events:none"></div>
-<video id="bgMusic" src="cancion.mp4" loop preload="auto" style="display:none;"></video>
+<video id="bgMusic" src="cancion.mp4" loop playsinline preload="auto" style="display:none;"></video>
 
 <script>
 const $=i=>document.getElementById(i),sleep=ms=>new Promise(r=>setTimeout(r,ms)),dlg=$('dlg'),g=$('c').getContext('2d');
@@ -47,7 +48,7 @@ const HRT=Array.from({length:22},(_,i)=>({x:Math.random()*320,y:Math.random()*18
 const PETALS=Array.from({length:90},(_,i)=>({x:Math.random()*320,y:Math.random()*180,v:.25+Math.random()*.5,p:i}));
 const CL=Array.from({length:9},(_,i)=>({x:i*45,y:10+(i*23)%65,s:1+i%3*.35,v:.08+(i%3)*.05}));
 
-/* ---------- EFECTOS DE SONIDO LIMPIOS (Solo personajes y eventos) ---------- */
+/* ---------- EFECTOS DE SONIDO (Celulares y PC) ---------- */
 let A,mg;
 const bgMusic=$('bgMusic');
 function au(){if(!A){A=new(window.AudioContext||window.webkitAudioContext)();mg=A.createGain();mg.gain.value=.4;mg.connect(A.destination)}if(A.state==='suspended')A.resume()}
@@ -58,15 +59,22 @@ const bad=()=>{tn('square',220,110,.4,.12);tn('sawtooth',160,70,.4,.08)};
 const chime=()=>[1047,1319,1568,2093].forEach((f,i)=>tn('triangle',f,0,.45,.1,i*.12));
 const stampSnd=()=>{tn('square',120,50,.2,.25);tn('sawtooth',70,40,.25,.15)};
 
-/* ---------- MÚSICA PRINCIPAL (YouTube / MP4) ---------- */
+/* ---------- MÚSICA ADAPTADA PARA MÓVILES (YouTube / MP4) ---------- */
 function ytId(t){const m=t.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([\w-]{11})/)||t.match(/^([\w-]{11})$/);return m?m[1]:''}
 function loadYT(){if(!YT_ID||yt||window.YT)return;window.onYouTubeIframeAPIReady=()=>{yt=new YT.Player('ytp',{width:'2',height:'2',videoId:YT_ID,playerVars:{playsinline:1,controls:0,loop:1,playlist:YT_ID,rel:0},events:{onReady:()=>{ytOK=1}}})};const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';document.head.appendChild(s)}
-function unlock(){if(ytOK){yt.mute();yt.playVideo()}}
+
+/* Función clave para desbloquear audio en celulares al primer toque */
+function unlockMobileAudio(){
+ au();
+ if(ytOK){try{yt.mute();yt.playVideo();setTimeout(()=>{yt.pauseVideo();yt.seekTo(0,true)},200)}catch(e){}}
+ bgMusic.play().then(()=>{bgMusic.pause();bgMusic.currentTime=0;}).catch(e=>{});
+}
+
 async function music(on){
  if(!on){bgMusic.pause();bgMusic.currentTime=0;if(ytOK)yt.pauseVideo();return}
  au();
  if(ytOK){yt.seekTo(0,true);yt.playVideo();yt.unMute();yt.setVolume(100);return}
- bgMusic.play().catch(e=>{console.log("Audio local no encontrado, usando silencio de respaldo.");});
+ bgMusic.play().catch(e=>{console.log("Reproduciendo respaldo local en móvil");});
 }
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&A)A.resume()});
 
@@ -193,7 +201,12 @@ async function game(){
  sc='title';ex='n';spk='';face=1;wx=0;ax=60;flw=0;frm=0;pep=0;stamp=0;FD.n=FD.e=FD.a=FD.t='';$('fin').style.display='none';music(false);unfade();fin=0;jy=jv=0;cnt=0;CO.forEach(c=>c.t=0);zm=1;wa=132;wp=188;BQ=null;FW.length=0;SP.length=0;
  if(!YT_ID){await say('PEPE','Pega el enlace de YouTube de "My Love Mine All Mine" de Mitski (o toca OMITIR si usarás cancion.mp4).',1);const l=await ask(['OMITIR'],'Enlace de YouTube...');const id=ytId(l);if(id){YT_ID=id;try{localStorage.setItem('yt',id)}catch(e){}}}
  loadYT();
- await say('NARRADOR','Hoy es un día muy especial, Aurora. Esta historia está hecha solo para ti. Toca el botón para empezar.',1);await choose(['▶ INICIAR']);good();unlock();
+ 
+ /* Al hacer clic en INICIAR, desbloqueamos audio para móviles y PC simultáneamente */
+ await say('NARRADOR','Hoy es un día muy especial, Aurora. Esta historia está hecha solo para ti. Toca el botón para empezar.',1);
+ await choose(['▶ INICIAR']);
+ good();
+ unlockMobileAudio(); 
  
  /* FASE 1: camino al Registro Civil */
  await fade('#fff');sc='out';unfade();await sleep(400);
@@ -222,7 +235,7 @@ async function game(){
  await say('OFICIAL','Pepe, ¿acepta a Aurora como su esposa por más de 10,000 años?',1);await choose(['¡Sí, acepto!','Mil veces sí, y otras 10,000 más']);good();
  await say('OFICIAL','Aurora, ¿acepta a Pepe como su esposo por más de 10,000 años?',1);await choose(['¡Sí, acepto!','Obvio que sí, ni lo dudes']);good();
  
- /* FASE 4: ceremonia (Suena la música principal limpia) */
+ /* FASE 4: ceremonia (Suena la música principal en cualquier navegador móvil) */
  await fade('#fff');sc='wed';flw=1;ex='joy';unfade();await sleep(500);chime();
  music(true);
  await say('OFICIAL','Por el poder que me otorga el Registro Civil y el amor que veo aquí, los declaro MARIDO Y MUJER. Pueden darse un beso.');
