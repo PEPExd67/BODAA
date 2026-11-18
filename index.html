@@ -34,66 +34,47 @@ button:focus-visible{outline:3px solid #ffb703}body{touch-action:manipulation;ov
 <div id="dlg"><div id="who"></div><div id="txt"></div><div id="ctl"></div></div>
 </div>
 
-<!-- Contenedor oculto para la música original de YouTube -->
-<div id="yt-player" style="position:fixed; bottom:0; right:0; width:1px; height:1px; opacity:0; pointer-events:none;"></div>
+<div id="ytp" style="position:fixed;right:0;bottom:0;width:2px;height:2px;opacity:.01;pointer-events:none"></div>
+<video id="bgMusic" src="cancion.mp4" loop preload="auto" style="display:none;"></video>
 
 <script>
 const $=i=>document.getElementById(i),sleep=ms=>new Promise(r=>setTimeout(r,ms)),dlg=$('dlg'),g=$('c').getContext('2d');
-let sc='title',T=0,wx=0,kw=0,goal=null,res=null,ax=60,pxx=380,fin=0,flw=0,ex='n',spk='',face=1,kl=0,frm=0,pep=0,clerk=0,stamp=0,jx=0,jy=0,jv=0,cnt=0,zm=1,wa=132,wp=188,BQ=null,ytPlayer=null,ytReady=false,SP=[],FW=[];
-const YT_ID='CwGbMYLjIpQ'; // ID de tu enlace oficial de Mitski
+let sc='title',T=0,wx=0,kw=0,goal=null,res=null,ax=60,pxx=380,fin=0,flw=0,ex='n',spk='',face=1,kl=0,frm=0,pep=0,clerk=0,stamp=0,jx=0,jy=0,jv=0,cnt=0,zm=1,wa=132,wp=188,BQ=null,yt=null,ytOK=0,SP=[],FW=[];
+const YT_FIXED='CwGbMYLjIpQ';
+let YT_ID=YT_FIXED?(YT_FIXED.match(/([\w-]{11})$/)||[])[1]:(()=>{try{return localStorage.getItem('yt')||''}catch(e){return ''}})();
 const FD={n:'',e:'',a:'',t:''};
 const HRT=Array.from({length:22},(_,i)=>({x:Math.random()*320,y:Math.random()*180,v:.15+Math.random()*.3,p:i}));
 const PETALS=Array.from({length:90},(_,i)=>({x:Math.random()*320,y:Math.random()*180,v:.25+Math.random()*.5,p:i}));
 const CL=Array.from({length:9},(_,i)=>({x:i*45,y:10+(i*23)%65,s:1+i%3*.35,v:.08+(i%3)*.05}));
 
+/* ---------- EFECTOS DE SONIDO LIMPIOS (Solo personajes y eventos) ---------- */
 let A,mg;
-function au(){if(!A){A=new(window.AudioContext||window.webkitAudioContext)();mg=A.createGain();mg.gain.value=.5;mg.connect(A.destination)}if(A.state==='suspended')A.resume()}
-function tn(type,f,f2,d,v=.2,t=0){if(!A)return;const o=A.createOscillator(),gn=A.createGain(),s=A.currentTime+t;o.type=type;o.frequency.setValueAtTime(f,s);if(f2)o.frequency.exponentialRampToValueAtTime(f2,s+d);gn.gain.setValueAtTime(v,s);gn.gain.exponentialRampToValueAtTime(.001,s+d);o.connect(gn);gn.connect(mg);o.start(s);o.stop(s+d+.02)}
-const coin=()=>{tn('square',988,0,.08,.15);tn('square',1319,0,.45,.15,.08)};
-const good=()=>[523,659,784,1047].forEach((f,i)=>tn('square',f,0,.15,.12,i*.08));
-const bad=()=>{tn('square',220,110,.4,.15);tn('sawtooth',160,70,.4,.1)};
-const chime=()=>[1047,1319,1568,2093].forEach((f,i)=>tn('triangle',f,0,.5,.12,i*.12));
-const stampSnd=()=>{tn('square',120,50,.2,.3);tn('sawtooth',70,40,.25,.2)};
+const bgMusic=$('bgMusic');
+function au(){if(!A){A=new(window.AudioContext||window.webkitAudioContext)();mg=A.createGain();mg.gain.value=.4;mg.connect(A.destination)}if(A.state==='suspended')A.resume()}
+function tn(type,f,f2,d,v=.15,t=0){if(!A)return;const o=A.createOscillator(),gn=A.createGain(),s=A.currentTime+t;o.type=type;o.frequency.setValueAtTime(f,s);if(f2)o.frequency.exponentialRampToValueAtTime(f2,s+d);gn.gain.setValueAtTime(v,s);gn.gain.exponentialRampToValueAtTime(.001,s+d);o.connect(gn);gn.connect(mg);o.start(s);o.stop(s+d+.02)}
+const coin=()=>{tn('square',988,0,.08,.12);tn('square',1319,0,.42,.12,.08)};
+const good=()=>[523,659,784,1047].forEach((f,i)=>tn('square',f,0,.15,.1,i*.08));
+const bad=()=>{tn('square',220,110,.4,.12);tn('sawtooth',160,70,.4,.08)};
+const chime=()=>[1047,1319,1568,2093].forEach((f,i)=>tn('triangle',f,0,.45,.1,i*.12));
+const stampSnd=()=>{tn('square',120,50,.2,.25);tn('sawtooth',70,40,.25,.15)};
 
-/* Cargar API de YouTube de forma segura */
-function initYouTube(){
- if(ytPlayer || window.YT) return;
- window.onYouTubeIframeAPIReady = function(){
-  ytPlayer = new YT.Player('yt-player', {
-   videoId: YT_ID,
-   playerVars: { 'autoplay': 0, 'controls': 0, 'loop': 1, 'playlist': YT_ID },
-   events: {
-    'onReady': (e)=>{ ytReady = true; }
-   }
-  });
- };
- const tag = document.createElement('script');
- tag.src = "https://www.youtube.com/iframe_api";
- const firstScriptTag = document.getElementsByTagName('script')[0];
- firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-}
-
-function music(on){
- if(!on){
-  if(ytReady && ytPlayer) { try{ ytPlayer.pauseVideo(); }catch(e){} }
-  return;
- }
+/* ---------- MÚSICA PRINCIPAL (YouTube / MP4) ---------- */
+function ytId(t){const m=t.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([\w-]{11})/)||t.match(/^([\w-]{11})$/);return m?m[1]:''}
+function loadYT(){if(!YT_ID||yt||window.YT)return;window.onYouTubeIframeAPIReady=()=>{yt=new YT.Player('ytp',{width:'2',height:'2',videoId:YT_ID,playerVars:{playsinline:1,controls:0,loop:1,playlist:YT_ID,rel:0},events:{onReady:()=>{ytOK=1}}})};const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';document.head.appendChild(s)}
+function unlock(){if(ytOK){yt.mute();yt.playVideo()}}
+async function music(on){
+ if(!on){bgMusic.pause();bgMusic.currentTime=0;if(ytOK)yt.pauseVideo();return}
  au();
- if(ytReady && ytPlayer){
-  try{
-   ytPlayer.seekTo(0, true);
-   ytPlayer.unMute();
-   ytPlayer.setVolume(100);
-   ytPlayer.playVideo();
-  }catch(e){console.log("Error reproduciendo YouTube:", e);}
- }
+ if(ytOK){yt.seekTo(0,true);yt.playVideo();yt.unMute();yt.setVolume(100);return}
+ bgMusic.play().catch(e=>{console.log("Audio local no encontrado, usando silencio de respaldo.");});
 }
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&A)A.resume()});
 
+/* ---------- UI / DIÁLOGOS ---------- */
 const V={AURORA:[520,'triangle'],PEPE:[200,'square'],OFICIAL:[330,'square']};
 function tap(){return new Promise(r=>{const f=e=>{if(e.type=='keydown'&&e.key!='Enter'&&e.key!=' ')return;dlg.removeEventListener('pointerdown',f);removeEventListener('keydown',f);r()};setTimeout(()=>{dlg.addEventListener('pointerdown',f);addEventListener('keydown',f)},180)})}
 async function say(who,text,nw){$('who').textContent=who;$('ctl').innerHTML='';const el=$('txt');el.textContent='';let sk=0;const h=()=>sk=1;dlg.addEventListener('pointerdown',h);const v=V[who]||[300,'triangle'];spk=who;
- for(let i=0;i<text.length&&!sk;i++){el.textContent+=text[i];if(i%3==0)tn(v[1],v[0]*(1+Math.random()*.1),0,.05,.05);await sleep(26)}
+ for(let i=0;i<text.length&&!sk;i++){el.textContent+=text[i];if(i%3==0)tn(v[1],v[0]*(1+Math.random()*.1),0,.05,.04);await sleep(26)}
  dlg.removeEventListener('pointerdown',h);spk='';el.textContent=text;if(nw)return;$('ctl').innerHTML='<span class=nx>▼ TOCA PARA SEGUIR</span>';await tap();$('ctl').innerHTML=''}
 function choose(opts){return new Promise(r=>{const c=$('ctl');c.innerHTML='';opts.forEach((o,i)=>{const b=document.createElement('button');b.textContent=o;b.onclick=()=>{au();c.innerHTML='';r(i)};c.appendChild(b)});
  c.firstChild.focus();c.onkeydown=e=>{const b=[...c.children],i=b.indexOf(document.activeElement);if(e.key=='ArrowRight'||e.key=='ArrowDown'){e.preventDefault();b[(i+1)%b.length].focus()}if(e.key=='ArrowLeft'||e.key=='ArrowUp'){e.preventDefault();b[(i-1+b.length)%b.length].focus()}}})}
@@ -112,10 +93,12 @@ addEventListener('keydown',e=>{const t=e.target.tagName;if(e.key==' '&&t!='INPUT
 addEventListener('keyup',e=>{if(e.key=='ArrowRight'||e.key=='d')kw=0;if(e.key=='ArrowLeft'||e.key=='a')kl=0});
 addEventListener('gesturestart',e=>e.preventDefault());
 
+/* ---------- PIXEL ART ---------- */
 const R=(a,b,w,h,c)=>{g.fillStyle=c;g.fillRect(Math.round(a),Math.round(b),w,h)};
 const HAIR='#0a0910',SK='#f8ebe3',BR='#4a2a18',WH='#fff7fb';
 function heart(x,y,c){R(x+1,y,2,1,c);R(x+4,y,2,1,c);R(x,y+1,7,2,c);R(x+1,y+3,5,1,c);R(x+2,y+4,3,1,c);R(x+3,y+5,1,1,c)}
-function hearts(){HRT.forEach(h=>{h.y-=h.v;if(h.y<-8){h.y=185;h.x=Math.random()*320}heart(h.x+Math.sin(T*.04+h.p)*4,h.y,h.p%2?'#ff8fb1':'#ffc2d4')})}
+function hearts(){HRT.forEach(h=>{h.y-=h.v;if(h.y<-8){h.y=185;h.x=Math.random()*320}heart(h.x+Math.sin(T*.04+h.p)*4,h.y,h.p%2?'#ff8fb1':'#ffc2d4')}
+)}
 function cloud(x,y,s){g.fillStyle='rgba(255,255,255,.92)';[[0,0,9],[10,-4,11],[22,0,9],[11,3,10]].forEach(([a,b,r])=>{g.beginPath();g.arc(x+a*s,y+b*s,r*s*.7,0,6.3);g.fill()})}
 function clouds(){CL.forEach(c=>cloud(((c.x+T*c.v)%380)-30,c.y+Math.sin(T*.02+c.x)*2,c.s))}
 function flower(x,y,c='#ff6fa0'){R(x+2,y+3,1,5,'#3a9a4a');const w=Math.round(Math.sin(T*.05+x*.3));R(x+1+w,y,3,3,c);R(x+2+w,y-1,1,1,c);R(x+2+w,y+1,1,1,'#ffd34d')}
@@ -156,15 +139,16 @@ function hill(c,o,k,a){g.fillStyle=c;g.beginPath();g.moveTo(0,150);for(let i=0;i
 function field(){R(0,150,320,30,'#9ee0a8');const C=['#ff6fa0','#ffd34d','#fff','#c9a0ff','#ff9a6a'];for(let i=0;i<44;i++)flower(((i*29-wx)%330+330)%330,142+i%4*8,C[i%5])}
 function arch(x,y){for(let i=0;i<=26;i++){const a=Math.PI*i/26,px=x-52*Math.cos(a),py=y-58*Math.sin(a);g.fillStyle=['#ff8fb1','#fff','#ffd6e4','#7ad28a'][i%4];g.beginPath();g.arc(px,py,4+i%2*2,0,6.3);g.fill()}R(x-56,y-4,6,44,'#fff');R(x+50,y-4,6,44,'#fff');for(let i=0;i<6;i++){flower(x-58,y+i*7-4,'#ff6fa0');flower(x+48,y+i*7-4,'#ff6fa0')}}
 const mix=(a,b,k)=>{const p=h=>[1,3,5].map(i=>parseInt(h.substr(i,2),16)),X=p(a),Y=p(b);return '#'+X.map((v,i)=>Math.round(v+(Y[i]-v)*k).toString(16).padStart(2,'0')).join('')};
-const CO=Array.from({length:10},(_,i)=>({x:90+i*62,y:[105,128,138][i%3],t:0})),BF=Array.from({length:8},(_,i)=>({x:i*45,y:85+i*8,p:i}));
+const CO=Array.from({length:10},(_,i)=>({x:80+i*28,y:[105,128,138][i%3],t:0})),BF=Array.from({length:8},(_,i)=>({x:i*45,y:85+i*8,p:i}));
+function hop(){if(jy==0)jv=-2.6}
 function jump(){if(goal!=null&&jy==0){jv=-3.2;tn('square',400,800,.12,.1)}}
 function sparks(){SP.forEach(s=>{s.x+=s.vx;s.y+=s.vy;s.vy+=.05;s.l--;R(s.x,s.y,2,2,s.l%4<2?'#ffd34d':'#ff8fb1')});SP=SP.filter(s=>s.l>0)}
 function boom(x,y){for(let i=0;i<46;i++){const a=Math.random()*6.3,v=.5+Math.random()*1.6;FW.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,l:50+Math.random()*30,c:['#ff4f88','#ffd34d','#fff','#c9a0ff','#7ad2ff'][i%5]})}}
 function butter(){BF.forEach(b=>{const bx=((b.x-wx*.5)%340+340)%340+Math.sin(T*.05+b.p)*8,by=b.y+Math.sin(T*.07+b.p*2)*8,w=(T>>2)&1?3:1,c=['#ff9fbd','#c9a0ff','#ffd34d','#7ad2ff'][b.p%4];R(bx-w,by,w,2,c);R(bx+1,by,w,2,c);R(bx,by,1,2,'#333')})}
-function drawOut(mv){const p=Math.min(1,wx/700);sky(mix('#bfe4ff','#ff9ec0',p),mix('#ffe3ee','#ffd9a0',p));g.fillStyle=mix('#fff6c0','#ffb36b',p);g.beginPath();g.arc(270,32+p*70,15+p*5,0,6.3);g.fill();clouds();
+function drawOut(mv){const p=Math.min(1,wx/300);sky(mix('#bfe4ff','#ff9ec0',p),mix('#ffe3ee','#ffd9a0',p));g.fillStyle=mix('#fff6c0','#ffb36b',p);g.beginPath();g.arc(270,32+p*70,15+p*5,0,6.3);g.fill();clouds();
  for(let i=0;i<3;i++){const bx=((T*.6+i*130)%420)-50,by=30+i*14+Math.sin(T*.1+i)*3,f=(T>>3)&1;R(bx,by+f,3,1,'#6a2a45');R(bx+3,by+1-f,3,1,'#6a2a45')}
  hill('#cdeec4',.1,.04,115);hill('#b0e3b8',.3,.05,130);field();
- const bx=730-wx;if(bx>-120&&bx<340){R(bx,86,92,64,'#fff1f5');R(bx-6,78,104,10,'#f7a8c0');R(bx+8,70,76,10,'#ffc2d4');R(bx+36,118,20,32,'#b3566f');R(bx+10,100,16,16,'#bfe4ff');R(bx+66,100,16,16,'#bfe4ff');R(bx+34,90,24,8,'#fff');heart(bx+43,91,'#e0356a');g.textAlign='center';g.fillStyle='#b3263f';g.font='5px "Press Start 2P",monospace';g.fillText('REGISTRO CIVIL',bx+46,82)}
+ const bx=330-wx;if(bx>-120&&bx<340){R(bx,86,92,64,'#fff1f5');R(bx-6,78,104,10,'#f7a8c0');R(bx+8,70,76,10,'#ffc2d4');R(bx+36,118,20,32,'#b3566f');R(bx+10,100,16,16,'#bfe4ff');R(bx+66,100,16,16,'#bfe4ff');R(bx+34,90,24,8,'#fff');heart(bx+43,91,'#e0356a');g.textAlign='center';g.fillStyle='#b3263f';g.font='5px "Press Start 2P",monospace';g.fillText('REGISTRO CIVIL',bx+46,82)}
  butter();
  CO.forEach(c=>{if(c.t)return;const sx=c.x-wx;if(sx<-8||sx>330)return;const cy=c.y+Math.sin(T*.1+c.x)*2;glow(sx+3,cy+3,'255,150,190');heart(sx,cy,'#ff4f88');if(Math.abs(sx+3-ax)<9&&Math.abs(150+jy-12-c.y)<16){c.t=1;cnt++;coin();for(let k=0;k<10;k++)SP.push({x:ax,y:c.y,vx:Math.random()*2-1,vy:Math.random()*-2,l:30})}});
  if(mv&&T%3==0)SP.push({x:ax-4,y:148+jy,vx:-.4,vy:-.2,l:22});
@@ -172,11 +156,25 @@ function drawOut(mv){const p=Math.min(1,wx/700);sky(mix('#bfe4ff','#ff9ec0',p),m
 function paper(){R(80,10,160,112,'#fffdf5');R(80,10,160,3,'#f7a8c0');R(80,119,160,3,'#f7a8c0');g.textAlign='left';g.fillStyle='#b3263f';g.font='6px "Press Start 2P",monospace';g.fillText('ACTA DE MATRIMONIO',96,26);g.fillStyle='#6a2a45';g.font='5px "Press Start 2P",monospace';
  [['NOMBRE:',FD.n],['NOVIO:',FD.e],['LO AMA:',FD.a],['TIEMPO:',FD.t?FD.t+' AÑOS':'']].forEach(([l,v],i)=>{g.fillText(l,90,48+i*20);R(90,53+i*20,140,1,'#e0678a');g.fillText(v.toUpperCase().slice(0,22),90,52+i*20-0)});
  heart(214,14,'#e0356a');if(stamp>0){g.save();g.translate(190,100);g.rotate(-.3);g.strokeStyle='#d6336c';g.lineWidth=2;g.strokeRect(-26,-9,52,18);g.fillStyle='#d6336c';g.font='7px "Press Start 2P",monospace';g.textAlign='center';g.fillText('APROBADO',0,3);g.restore()}}
-function drawInt(mv){R(0,0,320,180,'#ffe0ea');for(let i=0;i<20;i++)R(i*16,0,1,150,'#ffd0de');R(0,150,320,30,'#f2b6a0');R(0,150,320,2,'#d89880');
- R(20,30,50,44,'#fff');R(23,33,44,38,'#bfe4ff');R(44,33,2,38,'#fff');cloud(36+Math.sin(T*.03)*6,50,.8);
- R(250,60,4,70,'#b0504a');heart(262,48,'#ff8fb1');heart(240,40,'#ffc2d4');
- R(150,126,130,5,'#d9a07a');R(156,131,6,19,'#c98a6a');R(268,131,6,19,'#c98a6a');R(30,138,18,12,'#e0678a');flower(34,128);flower(39,126,'#ffd34d');
- cleric(215,126);if(pep)pepe(jx,150,'joy');aurora(ax,150,mv);hearts();if(frm)paper()}
+function fw(){FW.forEach(f=>{f.x+=f.vx;f.y+=f.vy;f.vy+=.02;f.l--;R(f.x,f.y,2,2,f.c)});for(let i=FW.length;i--;)if(FW[i].l<=0)FW.splice(i,1)}
+function win(x){R(x-2,30,36,56,'#e6b86a');g.fillStyle='#e6b86a';g.beginPath();g.arc(x+16,32,18,0,6.3);g.fill();g.fillStyle='#bfe4ff';g.beginPath();g.arc(x+16,32,16,0,6.3);g.fill();R(x,32,32,52,'#bfe4ff');cloud(x+8+Math.sin(T*.03+x)*6,50,.5);R(x+15,16,2,68,'#fff');R(x,52,32,2,'#fff');R(x-4,84,40,3,'#e6b86a')}
+function drawInt(mv){g.save();g.translate(160,120);g.scale(zm,zm);g.translate(-160,-120);
+ R(0,0,320,150,'#fff0f5');for(let i=0;i<22;i++)R(i*16+4,0,8,150,'#ffe4ee');R(0,0,320,5,'#e6b86a');R(0,144,320,4,'#e6b86a');
+ for(let i=0;i<20;i++)for(let j=0;j<2;j++)R(i*16,150+j*15,16,15,(i+j)&1?'#f6d9c2':'#fff3e8');
+ R(0,154,320,9,'#e0678a');R(0,154,320,1,'#e6b86a');R(0,162,320,1,'#e6b86a');
+ win(24);win(264);
+ g.fillStyle='rgba(255,240,200,.13)';g.beginPath();g.moveTo(24,60);g.lineTo(56,60);g.lineTo(110,150);g.lineTo(30,150);g.fill();g.beginPath();g.moveTo(264,60);g.lineTo(296,60);g.lineTo(250,150);g.lineTo(190,150);g.fill();
+ for(let x=0;x<=320;x+=6){const y=10+Math.abs(Math.sin(x/53*Math.PI))*10;R(x,y,4,4,x%18?'#ff8fb1':'#fff');if(x%12==0)R(x+1,y+3,3,3,'#7ad28a')}
+ const sx=Math.sin(T*.03)*3;R(159+sx*.3,0,2,18,'#e6b86a');R(138+sx,18,44,3,'#e6b86a');for(let i=0;i<8;i++)R(140+sx+i*5,21,1,3+((T>>3)+i)%3,'#fff');for(let i=0;i<5;i++){const fx=140+sx+i*9;R(fx,12,2,4,'#fff6c0');R(fx,10+((T>>2)+i)%2,2,2,'#ffb347')}glow(160+sx,18,'255,230,150');
+ arch(215,122);R(150,36,130,16,'#e6b86a');R(152,38,126,12,'#fff7fb');g.textAlign='center';g.fillStyle='#b3263f';g.font='5px "Press Start 2P",monospace';g.fillText('REGISTRO CIVIL · BODAS',215,47);
+ R(90,128,30,22,'#fff7fb');R(90,148,30,2,'#ffd6e4');R(95,120,20,8,'#fff');R(99,112,12,8,'#ffd6e4');R(103,106,4,6,'#fff');heart(102,99,'#e0356a');
+ R(150,126,130,24,'#fff7fb');for(let i=0;i<13;i++)R(150+i*10,148,10,3,'#ffd6e4');R(150,126,130,2,'#e6b86a');
+ R(160,114,6,12,'#7ad2ff');flower(158,106);flower(164,104,'#ffd34d');flower(161,108,'#fff');R(255,120,8,6,'#e0356a');R(257,118,4,2,'#ffd34d');
+ [[12,'#ff8fb1'],[26,'#fff'],[40,'#ffd34d'],[292,'#c9a0ff'],[306,'#ff8fb1'],[278,'#fff']].forEach(([x,c],k)=>{const by=78+Math.sin(T*.04+k)*5;R(x,by+8,1,150-by-8,'#bbb');g.fillStyle=c;g.beginPath();g.arc(x,by,8,0,6.3);g.fill();R(x-3,by-4,2,2,'#fff')});
+ for(let i=0;i<2;i++){const bx=((T*.8+i*170)%380)-30,by=40+i*18+Math.sin(T*.1+i)*4,f=(T>>3)&1;R(bx,by+f*2,4,1,'#fff');R(bx+4,by+1,3,2,'#fff');R(bx+7,by+f*2,4,1,'#fff')}
+ cleric(215,126);if(pep)pepe(jx,150+(jx>140?Math.round(Math.abs(Math.sin(T*.4))*-3):0),'joy');aurora(ax,150+jy,mv);
+ PETALS.forEach(q=>{q.y+=q.v*.8;q.x+=Math.sin(T*.03+q.p)*.35+.12;if(q.y>165||q.x>324){q.y=-3;q.x=Math.random()*320}R(q.x,q.y,2,1,q.p%3?'#ffc0d0':'#fff')});
+ hearts();if(frm)paper();g.restore();fw()}
 function drawWed(){g.save();g.translate(160,120);g.scale(zm,zm);g.translate(-160,-120);sky('#ffb3d1','#ffe9c9');g.fillStyle='#fff3c0';g.beginPath();g.arc(160,64,26,0,6.3);g.fill();clouds();hill('#cdeec4',0,.05,118);R(0,150,320,30,'#9ee0a8');
  for(let i=0;i<44;i++)flower((i*29)%330,142+i%4*8,['#ff6fa0','#ffd34d','#fff','#c9a0ff'][i%4]);arch(160,124);cleric(160,150);butter();aurora(wa,150,0);pepe(wp,150,'joy');
  if(BQ){BQ.t+=.011;const t=BQ.t,bx=wa+t*150,by=118-Math.sin(t*Math.PI)*80;flower(bx,by,'#ff6fa0');flower(bx+3,by+1,'#ffd34d');flower(bx-3,by+1,'#fff');if(t>=1){boom(bx,120);BQ=null}}
@@ -188,19 +186,26 @@ function drawTitle(){sky('#ffc2d9','#fff0f6');g.fillStyle='#fff6c0';g.beginPath(
  g.textAlign='center';g.fillStyle='#d6336c';g.font='13px "Press Start 2P",monospace';g.fillText('AURORA & PEPE',160,26);g.fillStyle='#8a3a5a';g.font='7px "Press Start 2P",monospace';g.fillText('NUESTRA BODA',160,40)}
 function loop(){T++;let mv=0;if(goal!=null){if(kw){mv=1;face=1;wx+=.9;if(wx>=goal){goal=null;res()}}else if(kl&&wx>0){mv=1;face=-1;wx-=.9}}
  jy+=jv;jv+=.25;if(jy>=0){jy=0;jv=0}g.clearRect(0,0,320,180);if(sc=='title')drawTitle();else if(sc=='out')drawOut(mv);else if(sc=='int')drawInt(0);else drawWed();if(stamp>0)stamp--;requestAnimationFrame(loop)}
+
+/* ---------- GUION ---------- */
 async function move(set,a,b,ms){const s=performance.now();while(true){const k=Math.min(1,(performance.now()-s)/ms);set(a+(b-a)*k);if(k>=1)break;await sleep(16)}}
 async function game(){
  sc='title';ex='n';spk='';face=1;wx=0;ax=60;flw=0;frm=0;pep=0;stamp=0;FD.n=FD.e=FD.a=FD.t='';$('fin').style.display='none';music(false);unfade();fin=0;jy=jv=0;cnt=0;CO.forEach(c=>c.t=0);zm=1;wa=132;wp=188;BQ=null;FW.length=0;SP.length=0;
- initYouTube();
- await say('NARRADOR','Hoy es un día muy especial, Aurora. Esta historia está hecha solo para ti. Toca el botón para empezar.',1);await choose(['▶ INICIAR']);good();
+ if(!YT_ID){await say('PEPE','Pega el enlace de YouTube de "My Love Mine All Mine" de Mitski (o toca OMITIR si usarás cancion.mp4).',1);const l=await ask(['OMITIR'],'Enlace de YouTube...');const id=ytId(l);if(id){YT_ID=id;try{localStorage.setItem('yt',id)}catch(e){}}}
+ loadYT();
+ await say('NARRADOR','Hoy es un día muy especial, Aurora. Esta historia está hecha solo para ti. Toca el botón para empezar.',1);await choose(['▶ INICIAR']);good();unlock();
+ 
+ /* FASE 1: camino al Registro Civil */
  await fade('#fff');sc='out';unfade();await sleep(400);
  await say('NARRADOR','Entre flores y nubecitas, Aurora va rumbo al Registro Civil. Hoy viene a pedir casarse con PEPE. Camina con ▶ o la flecha derecha, y salta con ▼ o la barra espaciadora para atrapar los corazones de la suerte.');
- await walkTo(700);chime();ex='smile';await say('NARRADOR','Aurora juntó '+cnt+' de 10 corazones de la suerte.');await say('AURORA','Llegamos... ¡estoy nerviosa y feliz!');
- await fade('#fff');sc='int';ax=60;ex='n';unfade();await sleep(400);
+ await walkTo(300);chime();ex='smile';await say('NARRADOR','Aurora juntó '+cnt+' de 10 corazones de la suerte.');await say('AURORA','Llegamos... ¡estoy nerviosa y feliz!');
+ 
+ /* FASE 2: formulario */
+ await fade('#fff');sc='int';ax=60;ex='n';unfade();zm=1.3;move(v=>zm=v,1.3,1,1200);await sleep(400);
  await say('OFICIAL','¡Muy buenos días! ¿Viene a solicitar matrimonio civil?',1);
  await choose(['Sí, vengo a casarme con PEPE','Claro, ¡con el amor de mi vida!']);good();
  await say('OFICIAL','Perfecto. Debe llenar el formulario oficial. Escriba con el corazón.');frm=1;
- await say('OFICIAL','Primer campo: su nombre completo.',1);FD.n=await ask(['Aurora'],'Tu nombre...');coin();
+ await say('OFICIAL','Primer campo: su nombre completo.',1);FD.n=await ask(['Aurora'],'Tu nombre...');coin();boom(100,80);
  for(;;){await say('OFICIAL','Segundo campo: el nombre del novio.',1);const v=await ask(['Pepe'],'Nombre del novio...');if(/pep/i.test(v)){FD.e=v;break}bad();shake();await say('OFICIAL','Mmm... ese no es el novio que viene en nuestros papeles. Intente de nuevo.')}coin();
  await say('OFICIAL','Tercer campo: ¿cuánto lo ama? Sea honesta, el Registro Civil lo verificará.',1);FD.a=await ask(['Muchísimo','Más que a nada en el mundo','Hasta el infinito'],'Cuánto lo amas...');coin();ex='joy';
  for(;;){await say('OFICIAL','Último campo: ¿cuántos AÑOS están destinados a estar juntos?',1);const v=await ask(['10000','50000','Para siempre'],'Número de años...');
@@ -208,21 +213,24 @@ async function game(){
   if(isNaN(n)){bad();shake();await say('OFICIAL','Eso no es un número de años, mi amor. Escríbalo con cifras, por favor.');continue}
   if(n<10000){bad();shake();ex='sur';await say('OFICIAL',`¡ERROR! ${n.toLocaleString('es-MX')} años es muy poquito. El tiempo mínimo obligatorio para casarse con PEPE es de al menos 10,000 años. Ni un día menos.`);ex='n';continue}
   FD.t=v;break}
- good();ex='joy';stamp=140;stampSnd();await say('OFICIAL','¡Formulario APROBADO! Todo en orden. Solo falta el novio...');
- frm=0;pep=1;jx=360;coin();await move(v=>jx=v,360,140,1400);ex='smile';
+ good();ex='joy';stamp=140;stampSnd();boom(215,70);hop();await say('OFICIAL','¡Formulario APROBADO! Todo en orden. Solo falta el novio...');
+ 
+ /* FASE 3: llega Pepe */
+ frm=0;pep=1;jx=360;coin();await move(v=>jx=v,360,140,1400);ex='smile';boom(140,70);hop();coin();await move(v=>ax=v,60,100,700);
  await say('PEPE','Aurora... aquí estoy. Llegué corriendo con flores.');
  await say('AURORA','Sabía que vendrías. Mírate, qué guapo.');
  await say('OFICIAL','Pepe, ¿acepta a Aurora como su esposa por más de 10,000 años?',1);await choose(['¡Sí, acepto!','Mil veces sí, y otras 10,000 más']);good();
  await say('OFICIAL','Aurora, ¿acepta a Pepe como su esposo por más de 10,000 años?',1);await choose(['¡Sí, acepto!','Obvio que sí, ni lo dudes']);good();
+ 
+ /* FASE 4: ceremonia (Suena la música principal limpia) */
  await fade('#fff');sc='wed';flw=1;ex='joy';unfade();await sleep(500);chime();
- 
- /* Dispara la canción oficial original de YouTube en el momento exacto de la boda */
  music(true);
- 
  await say('OFICIAL','Por el poder que me otorga el Registro Civil y el amor que veo aquí, los declaro MARIDO Y MUJER. Pueden darse un beso.');
  move(v=>zm=v,1,1.6,2200);await move(v=>wa=v,132,171,1800);boom(160,70);for(let i=0;i<5;i++){coin();boom(60+i*50,40+i%2*30);await sleep(320)}
  await move(v=>zm=v,1.6,1,900);wa=140;
  await say('NARRADOR','Un último gesto antes de irse: la novia lanza el ramo.',1);await choose(['💐 LANZAR EL RAMO']);good();BQ={t:0};await sleep(2800);
+ 
+ /* FASE 5: créditos */
  fin=1;await fade('#ffe3ec',900);
  const F=$('fin');F.style.display='flex';F.innerHTML='';unfade();
  const h=document.createElement('h2');h.textContent='❤ MARIDO Y MUJER ❤';F.appendChild(h);
